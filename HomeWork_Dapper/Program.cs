@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace HomeWork_Dapper
 {
-    public class Countries: ICloneable
+    public class Countries : ICloneable
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -32,7 +32,7 @@ namespace HomeWork_Dapper
 
     }
 
-    public class Cities: ICloneable
+    public class Cities : ICloneable
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -53,7 +53,7 @@ namespace HomeWork_Dapper
         }
     }
 
-    public class Categories: ICloneable
+    public class Categories : ICloneable
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -74,7 +74,7 @@ namespace HomeWork_Dapper
         }
     }
 
-    public class Promotions: ICloneable
+    public class Promotions : ICloneable
     {
         public int Id { get; set; }
         public int Percent { get; set; }
@@ -103,7 +103,7 @@ namespace HomeWork_Dapper
         }
     }
 
-    public class Clients: ICloneable
+    public class Clients : ICloneable
     {
         public int Id { get; set; }
         public string FullName { get; set; }
@@ -151,11 +151,21 @@ namespace HomeWork_Dapper
         void DeleteCities(Cities cities);
         void DeleteCategories(Categories categories);
         void DeletePromotions(Promotions promotions);
+        List<Clients> GetClients();
+        List<Clients> GetEmailClients();
+        List<Categories> GetCategories();
         List<Promotions> GetPromotions();
-
+        List<Cities> GetCities();
+        List<Countries> GetCountries();
+        List<Clients> GetClientsFromCity(string city);
+        List<Clients> GetClientsFromCountries(string country);
+        List<Promotions> GetPromotionsFromCountries(string country);
+        List<Cities> GetCitiesForCountry(string country);
+        List<Categories> GetCategoriesForClient(string client);
+        List<Promotions> GetPromotionsForCategories(string categories);
     }
 
-    public class MailingsRepository: IMailingsRepository
+    public class MailingsRepository : IMailingsRepository
     {
         readonly string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=MailingsDb;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
 
@@ -248,6 +258,87 @@ namespace HomeWork_Dapper
             db.Execute(query, promotions);
         }
 
+        public List<Categories> GetCategories()
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT * FROM Categories";
+            var categories = db.Query<Categories>(query);
+            return categories.ToList();
+        }
+
+        public List<Categories> GetCategoriesForClient(string client)
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT ct.Name FROM InterestedBuyers ib JOIN Categories ct ON ib.CategoryId = ct.Id JOIN Clients cl ON ib.ClientId = cl.Id where cl.FullName = @client";
+            var categories = db.Query<Categories>(query, new { client });
+            return categories.ToList();
+        }
+
+        public List<Cities> GetCities()
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT * FROM Cities";
+            var cities = db.Query<Cities>(query);
+            return cities.ToList();
+        }
+
+        public List<Cities> GetCitiesForCountry(string country)
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT ci.Name FROM Clients cl JOIN Cities ci ON cl.CityId = ci.Id JOIN Countries co ON cl.CountryId = co.Id where co.Name = @country";
+            var cities = db.Query<Cities>(query, new { country });
+            return cities.ToList();
+        }
+
+        public List<Clients> GetClients()
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT * FROM Clients";
+            var clients = db.Query<Clients>(query);
+            return clients.ToList();
+        }
+
+        public List<Clients> GetClientsFromCity(string city)
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT cl.Id, cl.FullName, cl.Gender FROM Clients cl, Cities ci where cl.CityId = ci.Id and ci.Name = @city";
+            var clients = db.Query<Clients>(query, new { city });
+            return clients.ToList();
+        }
+
+        public List<Clients> GetClientsFromCountries(string country)
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT cl.Id, cl.FullName, cl.Gender FROM Clients cl, Countries co where cl.CountryId = co.Id and co.Name = @country";
+            var clients = db.Query<Clients>(query, new { country });
+            return clients.ToList();
+        }
+
+        public List<Countries> GetCountries()
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT * FROM Countries";
+            var countries = db.Query<Countries>(query);
+            return countries.ToList();
+        }
+
+        public List<Clients> GetEmailClients()
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT Id, FullName, Email FROM Clients";
+            var clients = db.Query<Clients>(query);
+            return clients.ToList();
+        }
+
         public List<Promotions> GetPromotions()
         {
             using var db = new SqlConnection(connectionString);
@@ -256,6 +347,24 @@ namespace HomeWork_Dapper
             var promotions = db.Query<Promotions>(query);
             return promotions.ToList();
 
+        }
+
+        public List<Promotions> GetPromotionsForCategories(string categories)
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT pr.[Percent], pr.StartDate, pr.EndDate, pr.CountryId, pr.ProducId FROM Promotions pr JOIN Products p ON pr.ProducId = p.Id JOIN Categories c ON p.CategoryId = c.Id where c.Name = @categories";
+            var promotions = db.Query<Promotions>(query, new { categories });
+            return promotions.ToList();
+        }
+
+        public List<Promotions> GetPromotionsFromCountries(string country)
+        {
+            using var db = new SqlConnection(connectionString);
+            db.Open();
+            var query = "SELECT pr.Id, pr.[Percent], pr.StartDate, pr.EndDate, pr.ProducId FROM Promotions pr, Countries co, Products p where pr.CountryId = co.Id and pr.ProducId = p.Id and co.Name = @country";
+            var promotions = db.Query<Promotions>(query, new { country });
+            return promotions.ToList();
         }
 
         public void UpdateCategories(Categories categories)
@@ -294,7 +403,7 @@ namespace HomeWork_Dapper
         {
             using var db = new SqlConnection(connectionString);
             db.Open();
-            var query = "update Promotions set Percent = @Percent, StartDate = @StartDate, EndDate = @EndDate, CountryId = @CountryId, ProducId = @ProducId where Id = @Id";
+            var query = "update Promotions set [Percent] = @Percent, StartDate = @StartDate, EndDate = @EndDate, CountryId = @CountryId, ProducId = @ProducId where Id = @Id";
             db.Execute(query, promotions);
         }
     }
@@ -537,15 +646,195 @@ namespace HomeWork_Dapper
                             continue;
                         }
 
+                        //-------------------------------------------------------------Dapper Задание2-----------------------------------------------------------------------//
+
+                        else if (request.RawUrl.Contains("GetClients"))
+                        {
+                            var city = request.QueryString["city"];
+                            var country = request.QueryString["country"];
+                            if (!string.IsNullOrWhiteSpace(city))
+                            {
+                                var clients = repository.GetClientsFromCity(city);
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append($"<h1 style = 'color:red'>This is list of clients from city {city}: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Clients item in clients)
+                                {
+                                    stringBuilder.Append($"<li>{item.Id}) {item.FullName} | {item.Gender}");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                            else if (!string.IsNullOrWhiteSpace(country))
+                            {
+                                var clients = repository.GetClientsFromCountries(country);
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append($"<h1 style = 'color:red'>This is list of clients from country {country}: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Clients item in clients)
+                                {
+                                    stringBuilder.Append($"<li>{item.Id}) {item.FullName} | {item.Gender}");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                            else
+                            {
+                                var clients = repository.GetClients();
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append("<h1 style = 'color:green'>This is list of clients: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Clients item in clients)
+                                {
+                                    stringBuilder.Append($"<li>{item.Id}) {item.FullName} | {item.DateOfBith} | {item.Gender} | {item.Email} | {item.CountryId} | {item.CityId}");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                        }
+
+                        else if (request.RawUrl.Contains("GetEmailClients"))
+                        {
+                            var clients = repository.GetClients();
+                            StringBuilder stringBuilder = new StringBuilder(1000);
+                            stringBuilder.Append("<h1 style = 'color:green'>This is list of email: </h1>");
+                            stringBuilder.Append("<ul>");
+                            foreach (Clients item in clients)
+                            {
+                                stringBuilder.Append($"<li>{item.Id}) {item.FullName} | {item.Email}");
+                            }
+                            stringBuilder.Append("</ul>");
+                            await stream.WriteLineAsync(stringBuilder.ToString());
+                            continue;
+                        }
+
+                        else if (request.RawUrl.Contains("GetCategories"))
+                        {
+                            var client = request.QueryString["client"];
+                            if (!string.IsNullOrWhiteSpace(client))
+                            {
+                                var categories = repository.GetCategoriesForClient(client);
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append($"<h1 style = 'color:red'>This is list of categories for client {client}: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Categories item in categories)
+                                {
+                                    stringBuilder.Append($"<li> {item.Name}");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                            else
+                            {
+                                var categoties = repository.GetCategories();
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append("<h1 style = 'color:green'>This is list of categories: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Categories item in categoties)
+                                {
+                                    stringBuilder.Append($"<li>{item.Id}) {item.Name}");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                        }
+
                         else if (request.RawUrl.Contains("GetPromotions"))
                         {
-                            var promotions = repository.GetPromotions();
-                            StringBuilder stringBuilder = new StringBuilder(1000);
-                            stringBuilder.Append("<h1 style = 'color:blue'>This is list of promotions: </h1>");
-                            stringBuilder.Append("<ul>");
-                            foreach (Promotions item in promotions)
+                            var country = request.QueryString["country"];
+                            var category = request.QueryString["category"];
+                            if (!string.IsNullOrWhiteSpace(country))
                             {
-                                stringBuilder.Append($"<li>{item.Id}) {item.Percent} {item.StartDate} {item.EndDate} {item.CountryId} {item.ProducId}</li>");
+                                var promotions = repository.GetPromotionsFromCountries(country);
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append($"<h1 style = 'color:red'>This is list of promotions from country {country}: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Promotions item in promotions)
+                                {
+                                    stringBuilder.Append($"<li>{item.Id}) {item.Percent} | {item.StartDate} | {item.EndDate} | {item.ProducId}</li>");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                            else if (!string.IsNullOrWhiteSpace(category))
+                            {
+                                var promotions = repository.GetPromotionsForCategories(category);
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append($"<h1 style = 'color:red'>This is list of promotions for category {category}: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Promotions item in promotions)
+                                {
+                                    stringBuilder.Append($"<li>{item.Percent} | {item.StartDate} | {item.EndDate} | {item.CountryId} | {item.ProducId}</li>");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                            else
+                            {
+                                var promotions = repository.GetPromotions();
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append("<h1 style = 'color:green'>This is list of promotions: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Promotions item in promotions)
+                                {
+                                    stringBuilder.Append($"<li>{item.Id}) {item.Percent} | {item.StartDate} | {item.EndDate} | {item.CountryId} | {item.ProducId}</li>");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                        }
+
+                        else if (request.RawUrl.Contains("GetCities"))
+                        {
+                            var country = request.QueryString["country"];
+                            if (!string.IsNullOrWhiteSpace(country))
+                            {
+                                var cities = repository.GetCitiesForCountry(country);
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append($"<h1 style = 'color:red'>This is list of cities from {country}: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Cities item in cities)
+                                {
+                                    stringBuilder.Append($"<li> {item.Name}");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+
+                            else
+                            {
+                                var cities = repository.GetCities();
+                                StringBuilder stringBuilder = new StringBuilder(1000);
+                                stringBuilder.Append("<h1 style = 'color:green'>This is list of cities: </h1>");
+                                stringBuilder.Append("<ul>");
+                                foreach (Cities item in cities)
+                                {
+                                    stringBuilder.Append($"<li>{item.Id}) {item.Name}");
+                                }
+                                stringBuilder.Append("</ul>");
+                                await stream.WriteLineAsync(stringBuilder.ToString());
+                                continue;
+                            }
+                        }
+
+                        else if (request.RawUrl.Contains("GetCountries"))
+                        {
+                            var countries = repository.GetCountries();
+                            StringBuilder stringBuilder = new StringBuilder(1000);
+                            stringBuilder.Append("<h1 style = 'color:green'>This is list of countries: </h1>");
+                            stringBuilder.Append("<ul>");
+                            foreach (Countries item in countries)
+                            {
+                                stringBuilder.Append($"<li>{item.Id}) {item.Name}");
                             }
                             stringBuilder.Append("</ul>");
                             await stream.WriteLineAsync(stringBuilder.ToString());
@@ -557,3 +846,4 @@ namespace HomeWork_Dapper
         }
     }
 }
+
