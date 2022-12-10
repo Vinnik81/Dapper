@@ -45,9 +45,7 @@ namespace HomeWork_Dapper
 
         public void CreatePromotions(Promotions promotions)
         {
-            Console.WriteLine($"Create {promotions.Id}");
             using var db = new SqlConnection(connectionString);
-
             var query = "INSERT INTO Promotions([Percent],[StartDate],[EndDate],CountryId,ProducId) VALUES (@Percent,@startDate,@endDate,@countryId,@productId)";
 
             var parametrs = new DynamicParameters();
